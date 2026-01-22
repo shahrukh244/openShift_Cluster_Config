@@ -13,36 +13,33 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-# 1. Mount the ISO (only if not already mounted)
-echo "--- Mounting Media ---"
-mkdir -p /tmp/redhat_iso
-
-if ! mountpoint -q /tmp/redhat_iso; then
-    run_command "mount /dev/sr0 /tmp/redhat_iso"
-else
-    echo "[+] /tmp/redhat_iso already mounted, skipping mount"
-fi
-
-# 2. Copy the RPM data (only if not already copied)
-echo "--- Copying Repositories to Local Storage ---"
-mkdir -p /mnt/redhat_rpm
-
+# 1. Check if BaseOS/AppStream already copied
 if [ ! -d /mnt/redhat_rpm/BaseOS ] || [ ! -d /mnt/redhat_rpm/AppStream ]; then
-    run_command "cp -rf /tmp/redhat_iso/BaseOS /tmp/redhat_iso/AppStream /mnt/redhat_rpm/"
-else
-    echo "[+] BaseOS and AppStream already present, skipping copy"
-fi
+    # Only try to mount ISO if local repos are missing
+    echo "--- Mounting Media ---"
 
-# 3. Cleanup Mount Point (only if mounted by us)
-echo "--- Cleaning Up ---"
-if mountpoint -q /tmp/redhat_iso; then
-    run_command "umount /tmp/redhat_iso"
+    if [ ! -b /dev/sr0 ]; then
+        echo "[!] /dev/sr0 not available. Cannot mount ISO. Skipping local repo copy."
+    else
+        mkdir -p /tmp/redhat_iso
+        run_command "mount /dev/sr0 /tmp/redhat_iso"
+
+        # 2. Copy RPM data
+        echo "--- Copying Repositories to Local Storage ---"
+        mkdir -p /mnt/redhat_rpm
+        run_command "cp -rf /tmp/redhat_iso/BaseOS /tmp/redhat_iso/AppStream /mnt/redhat_rpm/"
+
+        # 3. Cleanup mount point
+        echo "--- Cleaning Up ---"
+        run_command "umount /tmp/redhat_iso"
+        rm -rf /tmp/redhat_iso
+    fi
+else
+    echo "[+] BaseOS and AppStream already present, skipping ISO mount"
 fi
-rm -rf /tmp/redhat_iso
 
 # 4. Create Local Repository Configuration (only if missing)
 echo "--- Writing local.repo file ---"
-
 if [ ! -f /etc/yum.repos.d/local.repo ]; then
 cat > /etc/yum.repos.d/local.repo <<EOF
 [AppStream]
@@ -68,14 +65,12 @@ run_command "yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-l
 # 6. Remove unused EPEL repo files (cleanup)
 echo "--- Cleaning unused EPEL repo files ---"
 cd /etc/yum.repos.d
-
 rm -f epel-testing.repo \
       epel-modular.repo \
       epel-testing-modular.repo
 
 # 7. Manually add CRB repo (only if missing)
 echo "--- Adding CodeReady Builder repo (manual) ---"
-
 if [ ! -f /etc/yum.repos.d/codeready.repo ]; then
 cat > /etc/yum.repos.d/codeready.repo <<EOF
 [codeready-builder]
@@ -103,6 +98,6 @@ run_command "yum install -y git"
 
 echo
 echo "[+] Process Complete."
-echo "[+] Local BaseOS/AppStream active."
+echo "[+] Local BaseOS/AppStream active (if ISO available)."
 echo "[+] EPEL active (stable only)."
 echo "[+] CRB added but disabled (enable only if needed)."
