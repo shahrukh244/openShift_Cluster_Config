@@ -1,12 +1,12 @@
 ---
 - name: RHEL 10.1 Keepalived Setup
-  hosts: localhost
+  hosts: svc-1.ocp.lan
   become: true
   gather_facts: false
 
   vars:
     # Base path for your source config files
-    config_src_base: "/root/openShift_Cluster_Config/service_Node_Config/service_Node-01/config_Files/keepalived"
+    config_src_base: "{{ ansible_user_dir }}/openShift_Cluster_Config/service_Node_Config/svc-1/config_Files/keepalived"
 
   tasks:
     - name: Install keepalived
@@ -47,23 +47,6 @@
         mode: '0644'
         modification_time: preserve
         access_time: preserve
-
-    - name: Deploy health check scripts
-      ansible.builtin.copy:
-        src: "{{ item.src }}"
-        dest: "{{ item.dest }}"
-        owner: root
-        group: root
-        mode: "0755"
-      loop:
-        - { src: "{{ config_src_base }}/check_bind9/chk_bind.sh", dest: "/usr/local/bin/chk_bind.sh" }
-        - { src: "{{ config_src_base }}/check_chrony/chk_chrony.sh", dest: "/usr/local/bin/chk_chrony.sh" }
-        - { src: "{{ config_src_base }}/check_dhcp/chk_dhcp.sh", dest: "/usr/local/bin/chk_dhcp.sh" }
-        - { src: "{{ config_src_base }}/check_haproxy/chk_haproxy.sh", dest: "/usr/local/bin/chk_haproxy.sh" }
-        - { src: "{{ config_src_base }}/check_drbd-nfs/chk_drbd.sh", dest: "/usr/local/bin/chk_drbd.sh" }
-        - { src: "{{ config_src_base }}/check_drbd-nfs/ha-backup.sh", dest: "/usr/local/bin/ha-backup.sh" }
-        - { src: "{{ config_src_base }}/check_drbd-nfs/ha-master.sh", dest: "/usr/local/bin/ha-master.sh" }
-      notify: Restart keepalived
 
     - name: Ensure keepalived service is enabled and running
       ansible.builtin.systemd:
