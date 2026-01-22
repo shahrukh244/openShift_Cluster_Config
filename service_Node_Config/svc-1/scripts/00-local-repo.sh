@@ -1,5 +1,4 @@
 #!/bin/bash
-
 set -e
 
 run_command() {
@@ -14,24 +13,37 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-# 1. Mount the ISO
+# 1. Mount the ISO (only if not already mounted)
 echo "--- Mounting Media ---"
-run_command "mkdir -p /tmp/redhat_iso"
-run_command "mount /dev/sr0 /tmp/redhat_iso"
+mkdir -p /tmp/redhat_iso
 
-# 2. Copy the RPM data
+if ! mountpoint -q /tmp/redhat_iso; then
+    run_command "mount /dev/sr0 /tmp/redhat_iso"
+else
+    echo "[+] /tmp/redhat_iso already mounted, skipping mount"
+fi
+
+# 2. Copy the RPM data (only if not already copied)
 echo "--- Copying Repositories to Local Storage ---"
-run_command "mkdir -p /mnt/redhat_rpm"
-run_command "cp -rf /tmp/redhat_iso/BaseOS /tmp/redhat_iso/AppStream /mnt/redhat_rpm/"
+mkdir -p /mnt/redhat_rpm
 
-# 3. Cleanup Mount Point
+if [ ! -d /mnt/redhat_rpm/BaseOS ] || [ ! -d /mnt/redhat_rpm/AppStream ]; then
+    run_command "cp -rf /tmp/redhat_iso/BaseOS /tmp/redhat_iso/AppStream /mnt/redhat_rpm/"
+else
+    echo "[+] BaseOS and AppStream already present, skipping copy"
+fi
+
+# 3. Cleanup Mount Point (only if mounted by us)
 echo "--- Cleaning Up ---"
-run_command "umount /tmp/redhat_iso"
-run_command "rm -rf /tmp/redhat_iso"
+if mountpoint -q /tmp/redhat_iso; then
+    run_command "umount /tmp/redhat_iso"
+fi
+rm -rf /tmp/redhat_iso
 
-# 4. Create Local Repository Configuration
+# 4. Create Local Repository Configuration (only if missing)
 echo "--- Writing local.repo file ---"
 
+if [ ! -f /etc/yum.repos.d/local.repo ]; then
 cat > /etc/yum.repos.d/local.repo <<EOF
 [AppStream]
 name=AppStream
@@ -45,6 +57,9 @@ baseurl=file:///mnt/redhat_rpm/BaseOS
 enabled=1
 gpgcheck=0
 EOF
+else
+    echo "[+] local.repo already exists, not overwriting"
+fi
 
 # 5. Install EPEL
 echo "--- Installing EPEL Repository ---"
@@ -58,9 +73,10 @@ rm -f epel-testing.repo \
       epel-modular.repo \
       epel-testing-modular.repo
 
-# 7. Manually add CRB repo (disabled by default)
+# 7. Manually add CRB repo (only if missing)
 echo "--- Adding CodeReady Builder repo (manual) ---"
 
+if [ ! -f /etc/yum.repos.d/codeready.repo ]; then
 cat > /etc/yum.repos.d/codeready.repo <<EOF
 [codeready-builder]
 name=CodeReady Builder
@@ -68,10 +84,13 @@ baseurl=https://cdn.redhat.com/content/dist/rhel8/8/x86_64/codeready-builder/os/
 enabled=0
 gpgcheck=0
 EOF
+else
+    echo "[+] codeready.repo already exists, not overwriting"
+fi
 
 # 8. Disable subscription-manager plugin (silence warnings)
 echo "--- Disabling subscription-manager plugin ---"
-sed -i 's/enabled=1/enabled=0/' /etc/yum/pluginconf.d/subscription-manager.conf || true
+sed -i 's/^enabled=1/enabled=0/' /etc/yum/pluginconf.d/subscription-manager.conf || true
 
 # 9. Refresh YUM and Show Repos
 echo "--- Refreshing Repolist ---"
