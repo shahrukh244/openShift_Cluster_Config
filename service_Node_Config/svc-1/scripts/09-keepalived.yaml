@@ -1,11 +1,11 @@
 ---
 - name: RHEL 10.1 Keepalived Setup
-  hosts: svc-1.ocp.lan
+  hosts: localhost
   become: true
-  gather_facts: false
+  # REQUIRED for ansible_user_dir to work
+  gather_facts: true
 
   vars:
-    # Base path for your source config files
     config_src_base: "{{ ansible_user_dir }}/openShift_Cluster_Config/service_Node_Config/svc-1/config_Files/keepalived"
 
   tasks:
@@ -14,12 +14,18 @@
         name: keepalived
         state: present
 
-    - name: Enable ip_nonlocal_bind sysctl
-      ansible.builtin.sysctl:
-        name: net.ipv4.ip_nonlocal_bind
-        value: "1"
+    # Replacing the broken sysctl module with lineinfile
+    - name: Configure ip_nonlocal_bind in sysctl.conf
+      ansible.builtin.lineinfile:
+        path: /etc/sysctl.conf
+        regexp: '^net.ipv4.ip_nonlocal_bind'
+        line: 'net.ipv4.ip_nonlocal_bind = 1'
         state: present
-        reload: yes
+      register: sysctl_file
+
+    - name: Apply sysctl settings if file changed
+      ansible.builtin.command: sysctl -p
+      when: sysctl_file.changed
 
     - name: Ensure keepalived config directory exists
       ansible.builtin.file:
