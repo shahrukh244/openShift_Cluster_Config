@@ -5,12 +5,17 @@
   gather_facts: false
 
   tasks:
+
     - name: Disable swap immediately
-      ansible.builtin.command: swapoff -a
+      ansible.builtin.shell: |
+        if swapon --show | grep -q "^/"; then
+          swapoff -a
+        else
+          exit 100
+        fi
       register: swapoff_result
-      # This prevents it from reporting 'changed' if swap was already off
       changed_when: "swapoff_result.rc == 0"
-      failed_when: false
+      failed_when: "swapoff_result.rc != 0 and swapoff_result.rc != 100"
 
     - name: Comment out swap entries in /etc/fstab
       ansible.builtin.replace:
