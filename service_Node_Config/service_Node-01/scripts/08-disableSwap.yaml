@@ -1,0 +1,34 @@
+---
+- name: Disable Swap for OpenShift (RHEL 10.1)
+  hosts: localhost
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Disable swap immediately
+      ansible.builtin.command: swapoff -a
+      register: swapoff_result
+      # This prevents it from reporting 'changed' if swap was already off
+      changed_when: "swapoff_result.rc == 0"
+      failed_when: false
+
+    - name: Comment out swap entries in /etc/fstab
+      ansible.builtin.replace:
+        path: /etc/fstab
+        regexp: '^([^#\s]+\s+([^#\s]+\s+)?swap\s+.*)$'
+        replace: '# \1'
+      register: fstab_result
+
+    - name: Debug swap status
+      ansible.builtin.debug:
+        msg: "Swap has been permanently disabled in fstab."
+      when: fstab_result.changed
+
+    - name: Verify swap is disabled
+      ansible.builtin.command: swapon --show
+      register: swapon_check
+      changed_when: false
+
+    - name: Report Current Swap
+      ansible.builtin.debug:
+        msg: "{{ 'Swap is still active!' if swapon_check.stdout != '' else 'Confirmed: Swap is inactive.' }}"
