@@ -1,6 +1,6 @@
 ---
 - name: RHEL 10.1 SSH System Setup
-  hosts: localhost
+  hosts: svc-1.ocp.lan
   become: true
   gather_facts: false
 
