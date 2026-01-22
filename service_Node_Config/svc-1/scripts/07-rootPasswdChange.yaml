@@ -1,6 +1,6 @@
 ---
 - name: Idempotent Root Password Setup
-  hosts: localhost
+  hosts: svc-1.ocp.lan
   become: true
   gather_facts: false
 
