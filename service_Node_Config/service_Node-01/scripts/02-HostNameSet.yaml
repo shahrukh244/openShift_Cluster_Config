@@ -5,7 +5,7 @@
   gather_facts: true
 
   vars:
-    desired_hostname: "svc-1.kube.lan"
+    desired_hostname: "svc-1.ocp.lan"
     cluster_ip: "10.0.0.11"
 
   tasks:
