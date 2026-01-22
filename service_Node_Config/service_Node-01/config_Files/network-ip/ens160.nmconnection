@@ -1,7 +1,7 @@
 network:
   version: 2
   ethernets:
-    ens32:
+    ens160:
       dhcp4: no
       addresses:
         - 192.168.1.51/24
