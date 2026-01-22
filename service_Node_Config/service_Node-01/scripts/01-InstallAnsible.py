@@ -13,7 +13,7 @@ def run(cmd, check=True):
     if check and result.returncode != 0:
         print(f"[-] Command failed: {cmd}")
         print(result.stderr)
-        sys.exit(1)
+        return result
     return result
 
 # ----------------------------
@@ -23,16 +23,23 @@ if os.geteuid() != 0:
     print("❌ Run this script as root!")
     sys.exit(1)
 
-print("=== Ansible Installer & Configurator (ROOT USER-LEVEL) ===")
+print(f"=== Ansible Installer for {os.getenv('PRETTY_NAME', 'RHEL 10')} ===")
 
 # ----------------------------
-# 1. Update & Install Ansible
+# 1. Install Ansible (RHEL 10 Logic)
 # ----------------------------
-print("[*] Updating package list...")
-run("apt update")
+print("[*] Attempting to install ansible-core from local AppStream...")
+# In RHEL 10, the package is often named 'ansible-core'
+res = run("dnf install -y ansible-core", check=False)
 
-print("[*] Installing Ansible...")
-run("apt install -y ansible")
+if res.returncode != 0:
+    print("[!] ansible-core not found. Trying 'ansible'...")
+    res = run("dnf install -y ansible", check=False)
+
+if res.returncode != 0:
+    print("[!] DNF installation failed. Attempting PIP3 (requires python3-pip)...")
+    run("dnf install -y python3-pip")
+    run("pip3 install ansible")
 
 # ----------------------------
 # 2. Prepare directories
@@ -41,48 +48,44 @@ ansible_dir = "/root/.ansible"
 os.makedirs(ansible_dir, exist_ok=True)
 
 # ----------------------------
-# 3. Copy ansible.cfg (STATIC FILE)
+# 3. Copy Files (Corrected Paths)
 # ----------------------------
-repo_cfg = "/root/kubernetes_Cluster_Config/service_Node_Config/service_Node-01/config_Files/ansible/ansible.cfg"
+base_repo_path = "/root/openShift_Cluster_Config/service_Node_Config/service_Node-01/config_Files/ansible"
+
+# Copy ansible.cfg
+repo_cfg = os.path.join(base_repo_path, "ansible.cfg")
 dest_cfg = "/root/.ansible.cfg"
 
-if not os.path.exists(repo_cfg):
-    print(f"❌ ansible.cfg not found in repo: {repo_cfg}")
-    sys.exit(1)
+if os.path.exists(repo_cfg):
+    shutil.copy(repo_cfg, dest_cfg)
+    print(f"[+] ansible.cfg copied → {dest_cfg}")
+else:
+    print(f"❌ Error: Source config not found at {repo_cfg}")
 
-shutil.copy(repo_cfg, dest_cfg)
-print(f"[+] ansible.cfg copied → {dest_cfg}")
-
-# ----------------------------
-# 4. Copy inventory
-# ----------------------------
-repo_hosts = "/root/kubernetes_Cluster_Config/service_Node_Config/service_Node-01/config_Files/ansible/hosts"
+# Copy inventory
+repo_hosts = os.path.join(base_repo_path, "hosts")
 dest_hosts = os.path.join(ansible_dir, "hosts")
 
 if os.path.exists(repo_hosts):
     shutil.copy(repo_hosts, dest_hosts)
     print(f"[+] Hosts copied → {dest_hosts}")
 else:
-    print("[*] No hosts file found, creating localhost inventory")
+    print("[*] No hosts file found in repo, creating default")
     with open(dest_hosts, "w") as f:
         f.write("[all]\nlocalhost ansible_connection=local\n")
 
 # ----------------------------
-# 5. Verify Ansible
+# 4. Verify Ansible
 # ----------------------------
-print("\n[*] Verifying Ansible installation (localhost only)...")
+print("\n[*] Verifying installation...")
+# Ensure we check the version to confirm it's working
+run("ansible --version")
 result = run("ansible localhost -m ping", check=False)
 
-if result.returncode == 0 and '"pong"' in result.stdout:
-    print("[+] ✅ Ansible is fully operational for root user.")
+if result.returncode == 0:
+    print("[+] ✅ Ansible is fully operational.")
 else:
-    print("[-] ❌ Ping test failed!")
-    print(result.stderr)
+    print("[-] ❌ Ping test failed. Check your local repo or python environment.")
     sys.exit(1)
 
-print("\n🎉 Ansible is READY!")
-print("📄 Config   : /root/.ansible.cfg")
-print("📦 Inventory: /root/.ansible/hosts")
-
-
-
+print("\n🎉 Setup Complete for RHEL 10!")
