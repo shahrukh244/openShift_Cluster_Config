@@ -1,6 +1,6 @@
 ---
 - name: Disable Swap for OpenShift (RHEL 10.1)
-  hosts: localhost
+  hosts: svc-1.ocp.lan
   become: true
   gather_facts: false
 
