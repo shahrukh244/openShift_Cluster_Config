@@ -1,0 +1,41 @@
+---
+- name: RHEL 10.1 SSH System Setup
+  hosts: localhost
+  become: true
+  gather_facts: false
+
+  tasks:
+    # -------- Configure SSHD --------
+
+    - name: Ensure PermitRootLogin is enabled
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '(?i)^[#\s]*PermitRootLogin\s+'
+        line: 'PermitRootLogin yes'
+        state: present
+        validate: '/usr/sbin/sshd -t -f %s'
+      notify: Restart SSHD
+
+    - name: Ensure PasswordAuthentication is enabled
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '(?i)^[#\s]*PasswordAuthentication\s+'
+        line: 'PasswordAuthentication yes'
+        state: present
+        validate: '/usr/sbin/sshd -t -f %s'
+      notify: Restart SSHD
+
+    - name: Ensure UsePAM is enabled
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '(?i)^[#\s]*UsePAM\s+'
+        line: 'UsePAM yes'
+        state: present
+        validate: '/usr/sbin/sshd -t -f %s'
+      notify: Restart SSHD
+
+  handlers:
+    - name: Restart SSHD
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
