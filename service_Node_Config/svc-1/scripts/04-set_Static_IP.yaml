@@ -7,7 +7,7 @@
   vars:
     nm_path: "/etc/NetworkManager/system-connections"
     # Update this path if it is different on your system
-    repo_path: "/root/openShift_Cluster_Config/service_Node_Config/svc-1/config_Files/network-ip"
+    repo_path: "{{ ansible_user_dir }}/openShift_Cluster_Config/service_Node_Config/svc-1/config_Files/network-ip"
     network_files:
       - ens160.nmconnection
       - ens192.nmconnection
