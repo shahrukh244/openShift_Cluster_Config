@@ -1,6 +1,6 @@
 ---
 - name: Force Replace Network Configurations (RHEL 10.1)
-  hosts: localhost
+  hosts: svc-1.ocp.lan
   become: true
   gather_facts: false
 
