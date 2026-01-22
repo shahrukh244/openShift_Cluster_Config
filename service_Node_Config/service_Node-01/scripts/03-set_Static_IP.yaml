@@ -1,0 +1,52 @@
+---
+- name: NetworkManager Keyfile Installer (RHEL 10.1)
+  hosts: localhost
+  become: true
+  gather_facts: true
+
+  vars:
+    # Updated to your actual OpenShift directory structure
+    nm_src_dir: /root/openShift_Cluster_Config/service_Node_Config/service_Node-01/config_Files/network-ip
+    # RHEL uses .nmconnection files for keyfiles
+    nm_files:
+      - ens160.nmconnection
+      - ens192.nmconnection
+
+  tasks:
+    # -------- 1. Check source files --------
+    - name: Check if NetworkManager source files exist
+      ansible.builtin.stat:
+        path: "{{ nm_src_dir }}/{{ item }}"
+      loop: "{{ nm_files }}"
+      register: nm_sources
+
+    # -------- 2. Copy Keyfiles --------
+    - name: Copy NetworkManager keyfiles to system-connections
+      ansible.builtin.copy:
+        src: "{{ nm_src_dir }}/{{ item.item }}"
+        dest: "/etc/NetworkManager/system-connections/{{ item.item }}"
+        owner: root
+        group: root
+        mode: "0600"
+      loop: "{{ nm_sources.results }}"
+      when: item.stat.exists
+      notify: Reload Connections
+
+    # -------- 3. Show Results --------
+    - name: Show NM copy results
+      ansible.builtin.debug:
+        msg: >
+          {{ '[+] Copied ' ~ item.item ~ ' → /etc/NetworkManager/system-connections/'
+             if item.stat.exists 
+             else '[-] Source file missing: ' ~ item.item }}
+      loop: "{{ nm_sources.results }}"
+
+  handlers:
+    - name: Reload Connections
+      ansible.builtin.shell: |
+        nmcli connection reload
+        # Bring up the connections specifically mentioned in the loop
+        {% for item in nm_files %}
+        nmcli connection up "{{ item | replace('.nmconnection', '') }}"
+        {% endfor %}
+      listen: Reload Connections
