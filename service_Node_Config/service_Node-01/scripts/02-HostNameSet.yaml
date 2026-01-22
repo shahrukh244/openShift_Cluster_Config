@@ -1,0 +1,38 @@
+---
+- name: Smart Hostname Setup
+  hosts: localhost
+  become: true
+  gather_facts: true
+
+  vars:
+    desired_hostname: "svc-1.kube.lan"
+
+  tasks:
+    - name: Check current hostname
+      ansible.builtin.debug:
+        msg: "Current hostname is {{ ansible_fqdn }}"
+
+    - name: Set system hostname
+      ansible.builtin.hostname:
+        name: "{{ desired_hostname }}"
+      # This task will only report 'changed' if the hostname actually differs
+      register: hostname_result
+
+    - name: Verify and notify of changes
+      ansible.builtin.debug:
+        msg: "[+] Hostname was updated to {{ desired_hostname }}"
+      when: hostname_result.changed
+
+    - name: Confirm state
+      ansible.builtin.debug:
+        msg: "[*] Hostname is already correct: {{ desired_hostname }}"
+      when: not hostname_result.changed
+
+    - name: Ensure /etc/hosts is synchronized
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        regexp: '^127\.0\.1\.1'
+        line: "127.0.1.1 {{ desired_hostname }} svc-1"
+        owner: root
+        group: root
+        mode: '0644'
