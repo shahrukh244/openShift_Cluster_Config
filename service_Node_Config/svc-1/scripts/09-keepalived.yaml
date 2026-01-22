@@ -1,6 +1,6 @@
 ---
 - name: RHEL 10.1 Keepalived Setup
-  hosts: localhost
+  hosts: svc-1.ocp.lan
   become: true
   # REQUIRED for ansible_user_dir to work
   gather_facts: true
