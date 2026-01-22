@@ -11,7 +11,7 @@
         generate_ssh_key: yes
         ssh_key_type: ed25519
         ssh_key_file: .ssh/id_ed25519
-        ssh_key_comment: "root@svc-1.kube.lan"
+        ssh_key_comment: "root@svc-1.ocp.lan"
       register: ssh_key_result
 
     - name: Slurp the public key content
@@ -23,7 +23,7 @@
       ansible.builtin.lineinfile:
         path: /root/.ssh/authorized_keys
         # This regex looks for any line ending with your specific key comment
-        regexp: '.*root@svc-1\.kube\.lan$'
+        regexp: '.*root@svc-1\.ocp\.lan$'
         line: "{{ public_key_raw.content | b64decode | trim }}"
         owner: root
         group: root
