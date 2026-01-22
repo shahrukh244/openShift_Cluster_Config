@@ -1,6 +1,6 @@
 ---
 - name: Smart Hostname & Network Setup
-  hosts: localhost
+  hosts: svc-1.ocp.lan
   become: true
   gather_facts: true
 
