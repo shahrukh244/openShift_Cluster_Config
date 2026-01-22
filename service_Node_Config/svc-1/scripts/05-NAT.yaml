@@ -1,6 +1,6 @@
 ---
 - name: IP Forwarding & NAT Setup (RHEL 10.1 Compatible)
-  hosts: localhost
+  hosts: svc-1.ocp.lan
   become: true
   gather_facts: false
 
