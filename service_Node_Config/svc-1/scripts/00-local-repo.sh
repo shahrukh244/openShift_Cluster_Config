@@ -96,6 +96,10 @@ run_command "yum repolist"
 echo "--- Installing Git ---"
 run_command "yum install -y git"
 
+# 11. Install Test Package
+echo "--- Installing Python3 ---"
+run_command "yum install -y python3"
+
 echo
 echo "[+] Process Complete."
 echo "[+] Local BaseOS/AppStream active (if ISO available)."
