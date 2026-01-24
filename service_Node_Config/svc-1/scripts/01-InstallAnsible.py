@@ -50,7 +50,7 @@ os.makedirs(ansible_dir, exist_ok=True)
 # ----------------------------
 # 3. Copy Files (Corrected Paths)
 # ----------------------------
-base_repo_path = "/root/openShift_Cluster_Config/service_Node_Config/service_Node-01/config_Files/ansible"
+base_repo_path = "openShift_Cluster_Config/service_Node_Config/svc-1/config_Files/ansible"
 
 # Copy ansible.cfg
 repo_cfg = os.path.join(base_repo_path, "ansible.cfg")
