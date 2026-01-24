@@ -1,6 +1,6 @@
 ---
 - name: DHCP Server Setup (RHEL 9.7)
-  hosts: localhost
+  hosts: svc-1.ocp.lan
   become: true
   gather_facts: false
 
@@ -23,7 +23,7 @@
 
     - name: Copy dhcpd.conf
       ansible.builtin.copy:
-        src: /root/kubernetes_Cluster_Config/service_Node_Config/service_Node-01/config_Files/dhcp/dhcpd.conf
+        src: "{{ ansible_user_dir }}/openShift_Cluster_Config/service_Node_Config/svc-1/config_Files/dhcp/"
         dest: /etc/dhcp/dhcpd.conf
         owner: root
         group: root
