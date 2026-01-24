@@ -5,12 +5,12 @@
   gather_facts: false
 
   vars:
-    nm_path: "/etc/NetworkManager/system-connections"
+    nm_path: "/etc/sysconfig/network-scripts"
     # Path relative to this playbook location
     repo_path: "{{ playbook_dir }}/../config_Files/network-ip"
     network_files:
-      - ens160.nmconnection
-      - ens192.nmconnection
+      - ifcfg-ens160
+      - ifcfg-ens192
 
   tasks:
     - name: Purge existing connection files
