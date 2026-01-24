@@ -1,13 +1,13 @@
 ---
-- name: Force Replace Network Configurations (RHEL 10.1)
+- name: Force Replace Network Configurations (RHEL 9.7)
   hosts: svc-1.ocp.lan
   become: true
   gather_facts: false
 
   vars:
     nm_path: "/etc/NetworkManager/system-connections"
-    # Update this path if it is different on your system
-    repo_path: "{{ ansible_user_dir }}/openShift_Cluster_Config/service_Node_Config/svc-1/config_Files/network-ip"
+    # Path relative to this playbook location
+    repo_path: "{{ playbook_dir }}/../config_Files/network-ip"
     network_files:
       - ens160.nmconnection
       - ens192.nmconnection
