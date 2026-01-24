@@ -1,0 +1,39 @@
+$TTL 604800
+@   IN  SOA svc-1.kube.lan. contact.kube.lan. (
+        2026010702 ; Serial (YYYYMMDDNN)
+        604800
+        86400
+        2419200
+        604800
+)
+
+@       IN  NS  svc-1.kube.lan.
+
+; =============================
+; Keepalived Virtual IP (VIP)
+; =============================
+1       IN  PTR svc.kube.lan.
+
+; =============================
+; Service Nodes (Real IPs)
+; =============================
+11      IN  PTR svc-1.kube.lan.
+12      IN  PTR svc-2.kube.lan.
+
+; =============================
+; Bastion
+; =============================
+100     IN  PTR bastion.kube.lan.
+
+; =============================
+; Control Plane Nodes
+; =============================
+111     IN  PTR kube-cp-1.kube.lan.
+112     IN  PTR kube-cp-2.kube.lan.
+113     IN  PTR kube-cp-3.kube.lan.
+
+; =============================
+; Worker Nodes
+; =============================
+221     IN  PTR kube-w-1.kube.lan.
+222     IN  PTR kube-w-2.kube.lan.
