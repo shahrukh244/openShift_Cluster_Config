@@ -1,0 +1,50 @@
+---
+- name: DHCP Server Setup (RHEL 9.7)
+  hosts: localhost
+  become: true
+  gather_facts: false
+
+  vars:
+    dhcp_interface: ens192
+
+  tasks:
+    - name: Install DHCP Server (only if missing)
+      ansible.builtin.dnf:
+        name: dhcp-server
+        state: present
+
+    - name: Set DHCP interface in /etc/sysconfig/dhcpd
+      ansible.builtin.lineinfile:
+        path: /etc/sysconfig/dhcpd
+        regexp: '^DHCPDARGS='
+        line: 'DHCPDARGS="{{ dhcp_interface }}"'
+        create: yes
+        backup: yes
+
+    - name: Copy dhcpd.conf
+      ansible.builtin.copy:
+        src: /root/kubernetes_Cluster_Config/service_Node_Config/service_Node-01/config_Files/dhcp/dhcpd.conf
+        dest: /etc/dhcp/dhcpd.conf
+        owner: root
+        group: root
+        mode: "0644"
+        backup: yes
+
+    - name: Ensure log file exists
+      ansible.builtin.file:
+        path: /var/log/check_dhcp.log
+        state: touch
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Validate DHCP configuration
+      ansible.builtin.command:
+        cmd: dhcpd -t -cf /etc/dhcp/dhcpd.conf
+      changed_when: false
+
+    - name: Enable and restart DHCP server
+      ansible.builtin.service:
+        name: dhcpd
+        state: restarted
+        enabled: true
