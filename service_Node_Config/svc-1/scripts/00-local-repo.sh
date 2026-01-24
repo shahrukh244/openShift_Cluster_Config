@@ -9,99 +9,88 @@ run_command() {
 
 # Ensure script runs as root
 if [ "$EUID" -ne 0 ]; then
-    echo "Please run this script with sudo or as root."
+    echo "Please run this script as root."
     exit 1
 fi
 
-# 1. Check if BaseOS/AppStream already copied
+echo "================================================="
+echo " RHEL 9.7 Local Repo Setup (OpenShift Safe Mode) "
+echo "================================================="
+
+# 1. Mount ISO and copy BaseOS/AppStream if missing
 if [ ! -d /mnt/redhat_rpm/BaseOS ] || [ ! -d /mnt/redhat_rpm/AppStream ]; then
-    # Only try to mount ISO if local repos are missing
-    echo "--- Mounting Media ---"
+    echo "--- Mounting Install Media ---"
 
     if [ ! -b /dev/sr0 ]; then
-        echo "[!] /dev/sr0 not available. Cannot mount ISO. Skipping local repo copy."
-    else
-        mkdir -p /tmp/redhat_iso
-        run_command "mount /dev/sr0 /tmp/redhat_iso"
-
-        # 2. Copy RPM data
-        echo "--- Copying Repositories to Local Storage ---"
-        mkdir -p /mnt/redhat_rpm
-        run_command "cp -rf /tmp/redhat_iso/BaseOS /tmp/redhat_iso/AppStream /mnt/redhat_rpm/"
-
-        # 3. Cleanup mount point
-        echo "--- Cleaning Up ---"
-        run_command "umount /tmp/redhat_iso"
-        rm -rf /tmp/redhat_iso
+        echo "[!] /dev/sr0 not available. Insert RHEL 9.7 ISO."
+        exit 1
     fi
+
+    mkdir -p /tmp/redhat_iso
+    run_command "mount /dev/sr0 /tmp/redhat_iso"
+
+    echo "--- Copying BaseOS and AppStream to /mnt/redhat_rpm ---"
+    mkdir -p /mnt/redhat_rpm
+    run_command "cp -rf /tmp/redhat_iso/BaseOS /tmp/redhat_iso/AppStream /mnt/redhat_rpm/"
+
+    echo "--- Cleaning up mount ---"
+    run_command "umount /tmp/redhat_iso"
+    rm -rf /tmp/redhat_iso
 else
     echo "[+] BaseOS and AppStream already present, skipping ISO mount"
 fi
 
-# 4. Create Local Repository Configuration (only if missing)
-echo "--- Writing local.repo file ---"
-if [ ! -f /etc/yum.repos.d/local.repo ]; then
-cat > /etc/yum.repos.d/local.repo <<EOF
-[AppStream]
-name=AppStream
-baseurl=file:///mnt/redhat_rpm/AppStream
-enabled=1
-gpgcheck=0
+# 2. Disable ALL existing repos (safety)
+echo "--- Disabling all existing repos ---"
+for f in /etc/yum.repos.d/*.repo; do
+    sed -i 's/^enabled=1/enabled=0/' "$f" || true
+done
 
+# 3. Create clean local.repo (overwrite intentionally)
+echo "--- Writing clean local.repo ---"
+cat > /etc/yum.repos.d/local.repo <<EOF
 [BaseOS]
-name=BaseOS
+name=RHEL-9.7-BaseOS
 baseurl=file:///mnt/redhat_rpm/BaseOS
 enabled=1
 gpgcheck=0
-EOF
-else
-    echo "[+] local.repo already exists, not overwriting"
-fi
 
-# 5. Install EPEL
-echo "--- Installing EPEL Repository ---"
-run_command "yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm"
-
-# 6. Remove unused EPEL repo files (cleanup)
-echo "--- Cleaning unused EPEL repo files ---"
-cd /etc/yum.repos.d
-rm -f epel-testing.repo \
-      epel-modular.repo \
-      epel-testing-modular.repo
-
-# 7. Manually add CRB repo (only if missing)
-echo "--- Adding CodeReady Builder repo (manual) ---"
-if [ ! -f /etc/yum.repos.d/codeready.repo ]; then
-cat > /etc/yum.repos.d/codeready.repo <<EOF
-[codeready-builder]
-name=CodeReady Builder
-baseurl=https://cdn.redhat.com/content/dist/rhel8/8/x86_64/codeready-builder/os/
-enabled=0
+[AppStream]
+name=RHEL-9.7-AppStream
+baseurl=file:///mnt/redhat_rpm/AppStream
+enabled=1
 gpgcheck=0
 EOF
-else
-    echo "[+] codeready.repo already exists, not overwriting"
-fi
 
-# 8. Disable subscription-manager plugin (silence warnings)
+# 4. Disable subscription-manager plugin
 echo "--- Disabling subscription-manager plugin ---"
 sed -i 's/^enabled=1/enabled=0/' /etc/yum/pluginconf.d/subscription-manager.conf || true
 
-# 9. Refresh YUM and Show Repos
-echo "--- Refreshing Repolist ---"
-run_command "yum clean all"
-run_command "yum repolist"
+# 5. Reset DNF state completely
+echo "--- Resetting DNF cache and module state ---"
+run_command "dnf clean all"
+run_command "rm -rf /var/cache/dnf"
+run_command "dnf module reset -y '*' || true"
 
-# 10. Install Test Package
-echo "--- Installing Git ---"
-run_command "yum install -y git"
+# 6. Rebuild metadata from local ISO
+echo "--- Rebuilding DNF metadata from local repos ---"
+run_command "dnf makecache"
 
-# 11. Install Test Package
-echo "--- Installing Python3 ---"
-run_command "yum install -y python3"
+# 7. Show active repos
+echo "--- Active Repositories ---"
+run_command "dnf repolist"
+
+# 8. Install test packages (must come only from ISO)
+echo "--- Installing Git (test) ---"
+run_command "dnf install -y git"
+
+echo "--- Installing Python3 (test) ---"
+run_command "dnf install -y python3"
 
 echo
-echo "[+] Process Complete."
-echo "[+] Local BaseOS/AppStream active (if ISO available)."
-echo "[+] EPEL active (stable only)."
-echo "[+] CRB added but disabled (enable only if needed)."
+echo "================================================="
+echo "[+] Local BaseOS/AppStream active (RHEL 9.7 ISO)"
+echo "[+] All external repos disabled"
+echo "[+] Offline-safe configuration complete"
+echo "[+] Ready for Ansible and OpenShift 4.16"
+echo "================================================="
