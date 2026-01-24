@@ -12,43 +12,50 @@
       - ifcfg-ens192
 
   tasks:
-    - name: Purge existing connection files
-      ansible.builtin.file:
-        path: "{{ nm_path }}/{{ item }}"
-        state: absent
-      loop: "{{ network_files }}"
+    # ------------------------------------------------------------------
+    # 1. Deploy network config files (authoritative, idempotent)
+    # ------------------------------------------------------------------
 
-    - name: Deploy corrected RHEL keyfiles
+    - name: Deploy corrected RHEL keyfiles (only overwrite if different)
       ansible.builtin.copy:
         src: "{{ repo_path }}/{{ item }}"
         dest: "{{ nm_path }}/{{ item }}"
         owner: root
         group: root
         mode: "0600"
+        backup: true
       loop: "{{ network_files }}"
       notify: Restart Networking
 
-    # ---------------- Zone assignment (checked before modify) ----------------
+    # ------------------------------------------------------------------
+    # 2. Verify zones from NetworkManager (no blind changes)
+    # ------------------------------------------------------------------
 
     - name: Get current zone for ens192
       ansible.builtin.command: nmcli -g connection.zone connection show ens192
       register: ens192_zone
       changed_when: false
+      failed_when: false
 
-    - name: Set ens192 zone to internal if needed
-      ansible.builtin.command: nmcli connection modify ens192 connection.zone internal
+    - name: Warn if ens192 zone is not internal (should come from ifcfg)
+      ansible.builtin.debug:
+        msg: "WARNING: ens192 zone is {{ ens192_zone.stdout }}, expected internal"
       when: ens192_zone.stdout != "internal"
 
     - name: Get current zone for ens160
       ansible.builtin.command: nmcli -g connection.zone connection show ens160
       register: ens160_zone
       changed_when: false
+      failed_when: false
 
-    - name: Set ens160 zone to external if needed
-      ansible.builtin.command: nmcli connection modify ens160 connection.zone external
+    - name: Warn if ens160 zone is not external (should come from ifcfg)
+      ansible.builtin.debug:
+        msg: "WARNING: ens160 zone is {{ ens160_zone.stdout }}, expected external"
       when: ens160_zone.stdout != "external"
 
-    # ---------------- Firewalld using Ansible module ----------------
+    # ------------------------------------------------------------------
+    # 3. Firewalld baseline
+    # ------------------------------------------------------------------
 
     - name: Ensure firewalld is running and enabled
       ansible.builtin.service:
@@ -56,27 +63,34 @@
         state: started
         enabled: true
 
-    - name: Set default firewall zone to internal
-      firewalld:
-        default_zone: internal
-        permanent: true
-        immediate: true
+    - name: Get current default firewall zone
+      ansible.builtin.command: firewall-cmd --get-default-zone
+      register: default_zone
+      changed_when: false
 
-    - name: Enable masquerade on external zone
-      firewalld:
-        zone: external
-        masquerade: true
-        permanent: true
-        immediate: true
+    - name: Set default firewall zone to internal if needed
+      ansible.builtin.command: firewall-cmd --set-default-zone=internal
+      when: default_zone.stdout != "internal"
+      notify: Reload Firewalld
 
-    - name: Enable masquerade on internal zone
-      firewalld:
-        zone: internal
-        masquerade: true
-        permanent: true
-        immediate: true
+    # ------------------------------------------------------------------
+    # 4. Masquerade (only on external zone — safe & idempotent)
+    # ------------------------------------------------------------------
 
-    # ---------------- Debug / verification ----------------
+    - name: Check masquerade on external zone
+      ansible.builtin.command: firewall-cmd --zone=external --query-masquerade
+      register: ext_masq
+      changed_when: false
+      failed_when: false
+
+    - name: Enable masquerade on external zone if needed (permanent)
+      ansible.builtin.command: firewall-cmd --zone=external --add-masquerade --permanent
+      when: ext_masq.stdout != "yes"
+      notify: Reload Firewalld
+
+    # ------------------------------------------------------------------
+    # 5. Verification
+    # ------------------------------------------------------------------
 
     - name: Get active firewall zones
       ansible.builtin.command: firewall-cmd --get-active-zones
@@ -87,16 +101,23 @@
       ansible.builtin.debug:
         var: active_zones.stdout
 
-    # ---------------- Final restart ----------------
+    - name: Verify ens192 has IP assigned
+      ansible.builtin.command: ip addr show ens192
+      register: ens192_ip
+      changed_when: false
 
-    - name: Restart NetworkManager to apply zone bindings
-      ansible.builtin.service:
-        name: NetworkManager
-        state: restarted
+    - name: Fail if ens192 has no IP
+      ansible.builtin.fail:
+        msg: "ens192 has no IP address assigned!"
+      when: "'inet ' not in ens192_ip.stdout"
 
   handlers:
+    - name: Reload Firewalld
+      ansible.builtin.command: firewall-cmd --reload
+
     - name: Restart Networking
       ansible.builtin.shell: |
         nmcli connection reload
-        nmcli connection up ens160
-        nmcli connection up ens192
+        nmcli con up ifname ens160
+        nmcli con up ifname ens192
+      changed_when: false
