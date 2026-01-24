@@ -6,6 +6,29 @@
 
   tasks:
     # ------------------------------------------------------------------
+    # Ensure IP forwarding is enabled (required for masquerade/NAT)
+    # ------------------------------------------------------------------
+
+    - name: Ensure sysctl file for IP forwarding exists
+      ansible.builtin.file:
+        path: /etc/sysctl.d/99-ipforward.conf
+        state: touch
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Enable IPv4 IP forwarding persistently
+      ansible.builtin.lineinfile:
+        path: /etc/sysctl.d/99-ipforward.conf
+        line: "net.ipv4.ip_forward = 1"
+        create: false
+        backup: true
+
+    - name: Apply sysctl settings immediately
+      ansible.builtin.command: sysctl -p /etc/sysctl.d/99-ipforward.conf
+      changed_when: false
+
+    # ------------------------------------------------------------------
     # 2. Verify firewall zones assigned to interfaces (runtime check)
     # ------------------------------------------------------------------
 
@@ -31,13 +54,19 @@
         msg: "ERROR: ens160 zone is '{{ ens160_zone.stdout | trim }}', expected 'external'"
       when: ens160_zone.stdout | trim != "external"
 
+    # ------------------------------------------------------------------
+    # Auto-correct zones if needed (added per your manual fix)
+    # ------------------------------------------------------------------
+
     - name: Assign ens192 to internal zone
       ansible.builtin.command: nmcli connection modify ens192 connection.zone internal
       when: ens192_zone.stdout | trim != "internal"
+      notify: Reload Firewalld & Restart NM
 
     - name: Assign ens160 to external zone
       ansible.builtin.command: nmcli connection modify ens160 connection.zone external
       when: ens160_zone.stdout | trim != "external"
+      notify: Reload Firewalld & Restart NM
 
     # ------------------------------------------------------------------
     # 3. Firewalld baseline
@@ -100,3 +129,11 @@
   handlers:
     - name: Reload Firewalld
       ansible.builtin.command: firewall-cmd --reload
+
+    - name: Reload Firewalld & Restart NM
+      ansible.builtin.shell: |
+        firewall-cmd --reload
+        nmcli connection reload
+        nmcli con up ifname ens160
+        nmcli con up ifname ens192
+      changed_when: false
