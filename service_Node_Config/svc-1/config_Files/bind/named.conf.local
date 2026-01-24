@@ -1,6 +1,6 @@
 zone "kube.lan" {
     type master;
-    file "/etc/bind/zones/db.kube.lan";
+    file "/var/named/db.kube.lan";
 
     notify yes;
     allow-transfer { 10.0.0.11; 10.0.0.12; };
@@ -9,7 +9,7 @@ zone "kube.lan" {
 
 zone "0.0.10.in-addr.arpa" {
     type master;
-    file "/etc/bind/zones/db.reverse";
+    file "/var/named/db.reverse";
 
     notify yes;
     allow-transfer { 10.0.0.11; 10.0.0.12; };
