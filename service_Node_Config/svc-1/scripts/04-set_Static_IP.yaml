@@ -28,30 +28,30 @@
       notify: Restart Networking
 
     # ------------------------------------------------------------------
-    # 2. Verify zones from NetworkManager (no blind changes)
+    # 2. Verify firewall zones assigned to interfaces (runtime check)
     # ------------------------------------------------------------------
 
-    - name: Get current zone for ens192
-      ansible.builtin.command: nmcli -g connection.zone connection show ens192
+    - name: Get current firewall zone for ens192
+      ansible.builtin.command: firewall-cmd --get-zone-of-interface=ens192
       register: ens192_zone
       changed_when: false
       failed_when: false
 
-    - name: Warn if ens192 zone is not internal (should come from ifcfg)
+    - name: Alert if ens192 zone is not internal
       ansible.builtin.debug:
-        msg: "WARNING: ens192 zone is {{ ens192_zone.stdout }}, expected internal"
-      when: ens192_zone.stdout != "internal"
+        msg: "ERROR: ens192 zone is '{{ ens192_zone.stdout | trim }}', expected 'internal'"
+      when: ens192_zone.stdout | trim != "internal"
 
-    - name: Get current zone for ens160
-      ansible.builtin.command: nmcli -g connection.zone connection show ens160
+    - name: Get current firewall zone for ens160
+      ansible.builtin.command: firewall-cmd --get-zone-of-interface=ens160
       register: ens160_zone
       changed_when: false
       failed_when: false
 
-    - name: Warn if ens160 zone is not external (should come from ifcfg)
+    - name: Alert if ens160 zone is not external
       ansible.builtin.debug:
-        msg: "WARNING: ens160 zone is {{ ens160_zone.stdout }}, expected external"
-      when: ens160_zone.stdout != "external"
+        msg: "ERROR: ens160 zone is '{{ ens160_zone.stdout | trim }}', expected 'external'"
+      when: ens160_zone.stdout | trim != "external"
 
     # ------------------------------------------------------------------
     # 3. Firewalld baseline
