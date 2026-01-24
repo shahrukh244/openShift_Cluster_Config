@@ -4,6 +4,9 @@
   become: true
   gather_facts: true
 
+  vars:
+    bind_base: "{{ playbook_dir }}/../config_Files/bind"
+
   tasks:
     # -------- BIND --------
 
@@ -24,16 +27,24 @@
 
     - name: Copy named.conf (main config)
       ansible.builtin.copy:
-        src: /root/kubernetes_Cluster_Config/service_Node_Config/service_Node-01/config_Files/dns/named.conf.options
+        src: "{{ bind_base }}/named.conf.options"
         dest: /etc/named.conf
         owner: root
         group: named
         mode: '0644'
         backup: yes
 
+    - name: Ensure /etc/named directory exists
+      ansible.builtin.file:
+        path: /etc/named
+        state: directory
+        owner: root
+        group: named
+        mode: '0755'
+
     - name: Copy additional named config (local zones)
       ansible.builtin.copy:
-        src: /root/kubernetes_Cluster_Config/service_Node_Config/service_Node-01/config_Files/dns/named.conf.local
+        src: "{{ bind_base }}/named.conf.local"
         dest: /etc/named/local.conf
         owner: root
         group: named
@@ -42,7 +53,7 @@
 
     - name: Copy forward zone file
       ansible.builtin.copy:
-        src: /root/kubernetes_Cluster_Config/service_Node_Config/service_Node-01/config_Files/dns/zones/db.kube.lan
+        src: "{{ bind_base }}/zones/db.kube.lan"
         dest: /var/named/db.kube.lan
         owner: root
         group: named
@@ -51,7 +62,7 @@
 
     - name: Copy reverse zone file
       ansible.builtin.copy:
-        src: /root/kubernetes_Cluster_Config/service_Node_Config/service_Node-01/config_Files/dns/zones/db.reverse
+        src: "{{ bind_base }}/zones/db.reverse"
         dest: /var/named/db.reverse
         owner: root
         group: named
