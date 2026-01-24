@@ -1,5 +1,5 @@
 options {
-    directory "/var/cache/bind";
+    directory "/var/named";
 
     listen-on port 53 { any; };
     listen-on-v6 { none; };
