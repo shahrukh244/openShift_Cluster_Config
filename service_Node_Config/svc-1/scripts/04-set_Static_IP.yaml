@@ -57,20 +57,20 @@
         enabled: true
 
     - name: Set default firewall zone to internal
-      ansible.posix.firewalld:
+      firewalld:
         default_zone: internal
         permanent: true
         immediate: true
 
     - name: Enable masquerade on external zone
-      ansible.posix.firewalld:
+      firewalld:
         zone: external
         masquerade: true
         permanent: true
         immediate: true
 
     - name: Enable masquerade on internal zone
-      ansible.posix.firewalld:
+      firewalld:
         zone: internal
         masquerade: true
         permanent: true
