@@ -1,6 +1,6 @@
 ---
 - name: Full RHEL 9.7 system setup with BIND
-  hosts: localhost
+  hosts: svc-1.ocp.lan
   become: true
   gather_facts: true
 
