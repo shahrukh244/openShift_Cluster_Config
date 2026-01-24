@@ -1,5 +1,5 @@
 ---
-- name: SSH Key Generation and Authorization (RHEL 10.1)
+- name: SSH Key Generation and Authorization (RHEL 9.7)
   hosts: localhost
   become: true
   gather_facts: false
