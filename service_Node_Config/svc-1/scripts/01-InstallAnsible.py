@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import sys
+import hashlib
 
 def run(cmd, check=True):
     print(f"[+] Running: {cmd}")
@@ -23,23 +24,47 @@ if os.geteuid() != 0:
     print("❌ Run this script as root!")
     sys.exit(1)
 
-print(f"=== Ansible Installer for {os.getenv('PRETTY_NAME', 'RHEL 10')} ===")
+print(f"=== Ansible Installer for {os.getenv('PRETTY_NAME', 'RHEL 9.7')} ===")
+
+def get_ansible_version():
+    res = run("ansible --version", check=False)
+    if res.returncode != 0:
+        return None
+    return res.stdout.splitlines()[0]
+
+installed = get_ansible_version()
+
+if installed:
+    print(f"[i] Ansible already present: {installed}")
+else:
+    print("[i] Ansible not installed, will install.")
+
+# Enforce supported version for OpenShift
+if installed:
+    if "2.14" not in installed:
+        print("❌ Installed Ansible version is not supported for OpenShift 4.16")
+        print(f"   Detected: {installed}")
+        print("   Required: ansible-core 2.14.x")
+        sys.exit(1)
+    else:
+        print("[+] Ansible version is supported for OpenShift.")
 
 # ----------------------------
-# 1. Install Ansible (RHEL 10 Logic)
+# 1. Install Ansible (Idempotent)
 # ----------------------------
-print("[*] Attempting to install ansible-core from local AppStream...")
-# In RHEL 10, the package is often named 'ansible-core'
-res = run("dnf install -y ansible-core", check=False)
+if not installed:
+    print("[*] Installing ansible-core from local AppStream...")
+    res = run("dnf install -y ansible-core", check=False)
 
-if res.returncode != 0:
-    print("[!] ansible-core not found. Trying 'ansible'...")
-    res = run("dnf install -y ansible", check=False)
+    if res.returncode != 0:
+        print("[!] ansible-core not found. Trying 'ansible'...")
+        res = run("dnf install -y ansible", check=False)
 
-if res.returncode != 0:
-    print("[!] DNF installation failed. Attempting PIP3 (requires python3-pip)...")
-    run("dnf install -y python3-pip")
-    run("pip3 install ansible")
+    if res.returncode != 0:
+        print("❌ Installation failed from local repos.")
+        sys.exit(1)
+else:
+    print("[+] Skipping install, Ansible already installed.")
 
 # ----------------------------
 # 2. Prepare directories
@@ -48,7 +73,32 @@ ansible_dir = "/root/.ansible"
 os.makedirs(ansible_dir, exist_ok=True)
 
 # ----------------------------
-# 3. Copy Files (Corrected Paths)
+# Helper: hash + copy if different
+# ----------------------------
+def file_hash(path):
+    if not os.path.exists(path):
+        return None
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+def copy_if_different(src, dst, label):
+    src_hash = file_hash(src)
+    dst_hash = file_hash(dst)
+
+    if dst_hash is None:
+        shutil.copy2(src, dst)
+        print(f"[+] {label} copied → {dst} (file did not exist)")
+    elif src_hash != dst_hash:
+        shutil.copy2(src, dst)
+        print(f"[+] {label} updated → {dst} (content changed)")
+    else:
+        print(f"[i] {label} already up-to-date, skipping copy")
+
+# ----------------------------
+# 3. Copy Files (Safe + Idempotent)
 # ----------------------------
 base_repo_path = "/root/openShift_Cluster_Config/service_Node_Config/svc-1/config_Files/ansible"
 
@@ -57,8 +107,7 @@ repo_cfg = os.path.join(base_repo_path, "ansible.cfg")
 dest_cfg = "/root/.ansible.cfg"
 
 if os.path.exists(repo_cfg):
-    shutil.copy(repo_cfg, dest_cfg)
-    print(f"[+] ansible.cfg copied → {dest_cfg}")
+    copy_if_different(repo_cfg, dest_cfg, "ansible.cfg")
 else:
     print(f"❌ Error: Source config not found at {repo_cfg}")
 
@@ -67,12 +116,14 @@ repo_hosts = os.path.join(base_repo_path, "hosts")
 dest_hosts = os.path.join(ansible_dir, "hosts")
 
 if os.path.exists(repo_hosts):
-    shutil.copy(repo_hosts, dest_hosts)
-    print(f"[+] Hosts copied → {dest_hosts}")
+    copy_if_different(repo_hosts, dest_hosts, "Hosts")
 else:
-    print("[*] No hosts file found in repo, creating default")
-    with open(dest_hosts, "w") as f:
-        f.write("[all]\nlocalhost ansible_connection=local\n")
+    if not os.path.exists(dest_hosts):
+        print("[*] No hosts file found in repo, creating default")
+        with open(dest_hosts, "w") as f:
+            f.write("[all]\nlocalhost ansible_connection=local\n")
+    else:
+        print("[i] Default hosts already exists, skipping creation")
 
 # ----------------------------
 # 4. Verify Ansible
@@ -85,7 +136,6 @@ if ver.returncode != 0:
     print("❌ Ansible command not found after installation!")
     sys.exit(1)
 
-# Extract first line which contains version
 first_line = ver.stdout.splitlines()[0].strip()
 print(f"[i] Installed Ansible version: {first_line}")
 
@@ -98,4 +148,3 @@ else:
     sys.exit(1)
 
 print("\n🎉 Setup Complete!")
-
