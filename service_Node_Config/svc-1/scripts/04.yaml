@@ -1,0 +1,102 @@
+---
+- name: Firewall and Verification Tasks (RHEL 9.7)
+  hosts: svc-1.ocp.lan
+  become: true
+  gather_facts: false
+
+  tasks:
+    # ------------------------------------------------------------------
+    # 2. Verify firewall zones assigned to interfaces (runtime check)
+    # ------------------------------------------------------------------
+
+    - name: Get current firewall zone for ens192
+      ansible.builtin.command: firewall-cmd --get-zone-of-interface=ens192
+      register: ens192_zone
+      changed_when: false
+      failed_when: false
+
+    - name: Alert if ens192 zone is not internal
+      ansible.builtin.debug:
+        msg: "ERROR: ens192 zone is '{{ ens192_zone.stdout | trim }}', expected 'internal'"
+      when: ens192_zone.stdout | trim != "internal"
+
+    - name: Get current firewall zone for ens160
+      ansible.builtin.command: firewall-cmd --get-zone-of-interface=ens160
+      register: ens160_zone
+      changed_when: false
+      failed_when: false
+
+    - name: Alert if ens160 zone is not external
+      ansible.builtin.debug:
+        msg: "ERROR: ens160 zone is '{{ ens160_zone.stdout | trim }}', expected 'external'"
+      when: ens160_zone.stdout | trim != "external"
+
+    - name: Assign ens192 to internal zone
+      ansible.builtin.command: nmcli connection modify ens192 connection.zone internal
+      when: ens192_zone.stdout | trim != "internal"
+
+    - name: Assign ens160 to external zone
+      ansible.builtin.command: nmcli connection modify ens160 connection.zone external
+      when: ens160_zone.stdout | trim != "external"
+
+    # ------------------------------------------------------------------
+    # 3. Firewalld baseline
+    # ------------------------------------------------------------------
+
+    - name: Ensure firewalld is running and enabled
+      ansible.builtin.service:
+        name: firewalld
+        state: started
+        enabled: true
+
+    - name: Get current default firewall zone
+      ansible.builtin.command: firewall-cmd --get-default-zone
+      register: default_zone
+      changed_when: false
+
+    - name: Set default firewall zone to internal if needed
+      ansible.builtin.command: firewall-cmd --set-default-zone=internal
+      when: default_zone.stdout != "internal"
+      notify: Reload Firewalld
+
+    # ------------------------------------------------------------------
+    # 4. Masquerade (only on external zone — safe & idempotent)
+    # ------------------------------------------------------------------
+
+    - name: Check masquerade on external zone
+      ansible.builtin.command: firewall-cmd --zone=external --query-masquerade
+      register: ext_masq
+      changed_when: false
+      failed_when: false
+
+    - name: Enable masquerade on external zone if needed (permanent)
+      ansible.builtin.command: firewall-cmd --zone=external --add-masquerade --permanent
+      when: ext_masq.stdout != "yes"
+      notify: Reload Firewalld
+
+    # ------------------------------------------------------------------
+    # 5. Verification
+    # ------------------------------------------------------------------
+
+    - name: Get active firewall zones
+      ansible.builtin.command: firewall-cmd --get-active-zones
+      register: active_zones
+      changed_when: false
+
+    - name: Print active firewall zones
+      ansible.builtin.debug:
+        var: active_zones.stdout
+
+    - name: Verify ens192 has IP assigned
+      ansible.builtin.command: ip addr show ens192
+      register: ens192_ip
+      changed_when: false
+
+    - name: Fail if ens192 has no IP
+      ansible.builtin.fail:
+        msg: "ens192 has no IP address assigned!"
+      when: "'inet ' not in ens192_ip.stdout"
+
+  handlers:
+    - name: Reload Firewalld
+      ansible.builtin.command: firewall-cmd --reload
