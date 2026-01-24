@@ -78,8 +78,17 @@ else:
 # 4. Verify Ansible
 # ----------------------------
 print("\n[*] Verifying installation...")
-# Ensure we check the version to confirm it's working
-run("ansible --version")
+
+ver = run("ansible --version", check=False)
+
+if ver.returncode != 0:
+    print("❌ Ansible command not found after installation!")
+    sys.exit(1)
+
+# Extract first line which contains version
+first_line = ver.stdout.splitlines()[0].strip()
+print(f"[i] Installed Ansible version: {first_line}")
+
 result = run("ansible localhost -m ping", check=False)
 
 if result.returncode == 0:
@@ -88,4 +97,5 @@ else:
     print("[-] ❌ Ping test failed. Check your local repo or python environment.")
     sys.exit(1)
 
-print("\n🎉 Setup Complete for RHEL 10!")
+print("\n🎉 Setup Complete!")
+
