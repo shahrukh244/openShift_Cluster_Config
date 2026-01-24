@@ -6,7 +6,6 @@
 
   vars:
     nm_path: "/etc/sysconfig/network-scripts"
-    # Path relative to this playbook location
     repo_path: "{{ playbook_dir }}/../config_Files/network-ip"
     network_files:
       - ifcfg-ens160
@@ -28,6 +27,72 @@
         mode: "0600"
       loop: "{{ network_files }}"
       notify: Restart Networking
+
+    # ---------------- Zone assignment (checked before modify) ----------------
+
+    - name: Get current zone for ens192
+      ansible.builtin.command: nmcli -g connection.zone connection show ens192
+      register: ens192_zone
+      changed_when: false
+
+    - name: Set ens192 zone to internal if needed
+      ansible.builtin.command: nmcli connection modify ens192 connection.zone internal
+      when: ens192_zone.stdout != "internal"
+
+    - name: Get current zone for ens160
+      ansible.builtin.command: nmcli -g connection.zone connection show ens160
+      register: ens160_zone
+      changed_when: false
+
+    - name: Set ens160 zone to external if needed
+      ansible.builtin.command: nmcli connection modify ens160 connection.zone external
+      when: ens160_zone.stdout != "external"
+
+    # ---------------- Firewalld using Ansible module ----------------
+
+    - name: Ensure firewalld is running and enabled
+      ansible.builtin.service:
+        name: firewalld
+        state: started
+        enabled: true
+
+    - name: Set default firewall zone to internal
+      ansible.posix.firewalld:
+        default_zone: internal
+        permanent: true
+        immediate: true
+
+    - name: Enable masquerade on external zone
+      ansible.posix.firewalld:
+        zone: external
+        masquerade: true
+        permanent: true
+        immediate: true
+
+    - name: Enable masquerade on internal zone
+      ansible.posix.firewalld:
+        zone: internal
+        masquerade: true
+        permanent: true
+        immediate: true
+
+    # ---------------- Debug / verification ----------------
+
+    - name: Get active firewall zones
+      ansible.builtin.command: firewall-cmd --get-active-zones
+      register: active_zones
+      changed_when: false
+
+    - name: Print active firewall zones
+      ansible.builtin.debug:
+        var: active_zones.stdout
+
+    # ---------------- Final restart ----------------
+
+    - name: Restart NetworkManager to apply zone bindings
+      ansible.builtin.service:
+        name: NetworkManager
+        state: restarted
 
   handlers:
     - name: Restart Networking
