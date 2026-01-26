@@ -12,8 +12,6 @@ zone=external
 [ipv4]
 address1=192.168.1.51/24
 dns=127.0.0.1
-dns=8.8.8.8;
-dns=1.1.1.1;
 dns-search=ocp.lan;
 gateway=192.168.1.1
 ignore-auto-dns=true
