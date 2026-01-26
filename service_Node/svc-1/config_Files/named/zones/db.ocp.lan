@@ -8,30 +8,30 @@ $TTL    604800
 
         IN      NS      svc-1.ocp.lan.
 
+#; --- Keepalived VIP ---
+#keepalived.ocp.lan.          IN      A       10.0.0.1
+#keepalived                   IN      A       10.0.0.1
+
 ; --- Service Node ---
 svc-1.ocp.lan.          IN      A       10.0.0.11
 svc-1                   IN      A       10.0.0.11
+#svc-2.ocp.lan.          IN      A       10.0.0.12
+#svc-2                   IN      A       10.0.0.12
 
-; --- Bootstrap Node ---
-ocp-bootstrap.lab.ocp.lan.        IN      A      10.0.0.200
-ocp-bootstrap                     IN      A      10.0.0.200
+#; --- Bastion Node ---
+#bastion.ocp.lan.          IN      A       10.0.0.100
+#bastion                   IN      A       10.0.0.100
 
 ; --- Control Plane Nodes ---
-ocp-cp-1.lab.ocp.lan.         IN      A      10.0.0.201
-ocp-cp-1                      IN      A      10.0.0.201
+ocp-cp-1.lab.ocp.lan.         IN      A      10.0.0.211
+ocp-cp-1                      IN      A      10.0.0.211
 
-ocp-cp-2.lab.ocp.lan.         IN      A      10.0.0.202
-ocp-cp-2                      IN      A      10.0.0.202
+ocp-cp-2.lab.ocp.lan.         IN      A      10.0.0.212
+ocp-cp-2                      IN      A      10.0.0.212
 
-ocp-cp-3.lab.ocp.lan.         IN      A      10.0.0.203
-ocp-cp-3                      IN      A      10.0.0.203
+ocp-cp-3.lab.ocp.lan.         IN      A      10.0.0.213
+ocp-cp-3                      IN      A      10.0.0.213
 
-; --- Worker Nodes ---
-ocp-w-1.lab.ocp.lan.        IN      A      10.0.0.211
-ocp-w-1                     IN      A      10.0.0.211
-
-ocp-w-2.lab.ocp.lan.        IN      A      10.0.0.212
-ocp-w-2                     IN      A      10.0.0.212
 
 ; --- OpenShift Internal - Load Balancer (on svc-1) ---
 api.lab.ocp.lan.        IN    A    10.0.0.11
@@ -39,9 +39,9 @@ api-int.lab.ocp.lan.    IN    A    10.0.0.11
 *.apps.lab.ocp.lan.     IN    A    10.0.0.11
 
 ; --- ETCD Cluster ---
-etcd-0.lab.ocp.lan.    IN    A     10.0.0.201
-etcd-1.lab.ocp.lan.    IN    A     10.0.0.202
-etcd-2.lab.ocp.lan.    IN    A     10.0.0.203
+etcd-0.lab.ocp.lan.    IN    A     10.0.0.211
+etcd-1.lab.ocp.lan.    IN    A     10.0.0.212
+etcd-2.lab.ocp.lan.    IN    A     10.0.0.213
 
 ; --- OpenShift Console ---
 oauth-openshift.apps.lab.ocp.lan.           IN  A  10.0.0.11
