@@ -1,4 +1,4 @@
-# openShift_Cluster_Config
+
 
 
 # Set HostName
@@ -123,6 +123,13 @@ cp -rf openShift_Cluster_Config/service_Node/svc-1/config_Files/dhcp/dhcpd.conf 
 
 chown root:dhcpd /etc/dhcp/dhcpd.conf
 chmod 640 /etc/dhcp/dhcpd.conf
+
+firewall-cmd --add-service=dhcp --zone=internal --permanent
+firewall-cmd --reload
+
+systemctl enable dhcpd
+systemctl start dhcpd
+systemctl status dhcpd
 
 
 
