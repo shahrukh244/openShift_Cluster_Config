@@ -1,4 +1,6 @@
 
+
+
 # Set HostName
 
 hostnamectl set-hostname svc-1.ocp.lan
@@ -46,7 +48,7 @@ git clone https://github.com/shahrukh244/openShift_Cluster_Config.git
 
 mv /etc/NetworkManager/system-connections/ens160.nmconnection /etc/NetworkManager/system-connections/ens160.nmconnection.ORG
 
-cp -rf openShift_Cluster_Config/service_Node/svc-1/config_Files/network-ip/ens160.nmconnection /etc/NetworkManager/system-connections/ens160.nmconnection
+cp -rf /root/openShift_Cluster_Config/service_Node/svc-1/config_Files/network-ip/ens160.nmconnection /etc/NetworkManager/system-connections/ens160.nmconnection
 
 chmod 600 /etc/NetworkManager/system-connections/ens160.nmconnection
 
@@ -56,7 +58,7 @@ chmod 600 /etc/NetworkManager/system-connections/ens160.nmconnection
 
 mv /etc/NetworkManager/system-connections/ens192.nmconnection /etc/NetworkManager/system-connections/ens192.nmconnection.ORG
 
-cp -rf openShift_Cluster_Config/service_Node/svc-1/config_Files/network-ip/ens192.nmconnection /etc/NetworkManager/system-connections/ens192.nmconnection
+cp -rf /root/openShift_Cluster_Config/service_Node/svc-1/config_Files/network-ip/ens192.nmconnection /etc/NetworkManager/system-connections/ens192.nmconnection
 
 chmod 600 /etc/NetworkManager/system-connections/ens192.nmconnection
 
@@ -85,12 +87,12 @@ dnf install bind bind-utils -y
 
 mv /etc/named.conf /etc/named.conf.ORG
 
-cp -rf openShift_Cluster_Config/service_Node/svc-1/config_Files/named/named.conf /etc/named.conf
+cp -rf /root/openShift_Cluster_Config/service_Node/svc-1/config_Files/named/named.conf /etc/named.conf
 
 chown root:named /etc/named.conf
 chmod 640 /etc/named.conf
 
-cp -rf openShift_Cluster_Config/service_Node/svc-1/config_Files/named/zones /etc/named
+cp -rf /root/openShift_Cluster_Config/service_Node/svc-1/config_Files/named/zones /etc/named
 
 chown root:named /etc/named/zones/db.ocp.lan
 chown root:named /etc/named/zones/db.reverse
@@ -117,7 +119,7 @@ dnf install dhcp-server -y
 
 mv /etc/dhcp/dhcpd.conf /etc/dhcp/dhcpd.conf.ORG
 
-cp -rf openShift_Cluster_Config/service_Node/svc-1/config_Files/dhcp/dhcpd.conf /etc/dhcp/dhcpd.conf
+cp -rf /root/openShift_Cluster_Config/service_Node/svc-1/config_Files/dhcp/dhcpd.conf /etc/dhcp/dhcpd.conf
 
 chown root:dhcpd /etc/dhcp/dhcpd.conf
 chmod 640 /etc/dhcp/dhcpd.conf
@@ -139,7 +141,7 @@ dnf install haproxy -y
 
 mv /etc/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg.ORG
 
-cp openShift_Cluster_Config/service_Node/svc-1/config_Files/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg
+cp /root/openShift_Cluster_Config/service_Node/svc-1/config_Files/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg
 
 
 firewall-cmd --add-port=6443/tcp --zone=internal --permanent
