@@ -10,8 +10,10 @@ $TTL    604800
   IN      NS      svc-1.ocp.lan.
 
 11      IN    PTR    svc-1.ocp.lan.
-11      IN    PTR    api.lab.ocp.lan.
-11     IN    PTR    api-int.lab.ocp.lan.
+11      IN    PTR    api.ocp.lan.
+11     IN    PTR    api-int.ocp.lan.
+;
+100  IN  PTR  bastion.ocp.lan.
 ;
 211    IN    PTR    ocp-cp-1.lab.ocp.lan.
 212    IN    PTR    ocp-cp-2.lab.ocp.lan.
