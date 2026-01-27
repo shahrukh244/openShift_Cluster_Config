@@ -8,19 +8,9 @@ $TTL    604800
 
         IN      NS      svc-1.ocp.lan.
 
-#; --- Keepalived VIP ---
-#keepalived.ocp.lan.          IN      A       10.0.0.1
-#keepalived                   IN      A       10.0.0.1
-
 ; --- Service Node ---
 svc-1.ocp.lan.          IN      A       10.0.0.11
 svc-1                   IN      A       10.0.0.11
-#svc-2.ocp.lan.          IN      A       10.0.0.12
-#svc-2                   IN      A       10.0.0.12
-
-#; --- Bastion Node ---
-#bastion.ocp.lan.          IN      A       10.0.0.100
-#bastion                   IN      A       10.0.0.100
 
 ; --- Control Plane Nodes ---
 ocp-cp-1.lab.ocp.lan.         IN      A      10.0.0.211
@@ -51,3 +41,4 @@ console-openshift-console.apps.lab.ocp.lan. IN  A  10.0.0.11
 _etcd-server-ssl._tcp.lab.ocp.lan. 86400 IN SRV 0 10 2380 etcd-0.lab.ocp.lan.
 _etcd-server-ssl._tcp.lab.ocp.lan. 86400 IN SRV 0 10 2380 etcd-1.lab.ocp.lan.
 _etcd-server-ssl._tcp.lab.ocp.lan. 86400 IN SRV 0 10 2380 etcd-2.lab.ocp.lan.
+~
