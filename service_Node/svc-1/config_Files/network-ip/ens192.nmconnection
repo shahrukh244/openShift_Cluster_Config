@@ -10,7 +10,7 @@ zone=internal
 [ethernet]
 
 [ipv4]
-address1=10.0.0.11/24
+address1=10.0.0.1/24
 dns=127.0.0.1;
 dns-search=ocp.lan;
 method=manual
