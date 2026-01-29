@@ -1,0 +1,9 @@
+
+# RedHat RPM's
+/share/redhat_rpm 10.0.0.0/24(rw,sync,root_squash,no_subtree_check,no_wdelay)
+
+# OpenShift StorageClass 'Delete'
+/share/OpenShift/StorageClass/Delete  10.0.0.0/24(rw,sync,root_squash,no_subtree_check,no_wdelay)
+
+# OpenShift StorageClass 'Retain'
+/share/OpenShift/StorageClass/Retain 10.0.0.0/24(rw,sync,root_squash,no_subtree_check,no_wdelay)
