@@ -12,6 +12,10 @@ $TTL    604800
 svc.ocp.lan.         IN      A       10.0.0.1
 svc                  IN      A       10.0.0.1
 
+; Temp Bootstrap Node
+ocp-bootstrap.ocp.lan.        IN      A      10.0.0.200
+ocp-bootstrap                 IN      A      10.0.0.200
+
 ; --- Bastion Node ---
 bastion.ocp.lan.     IN      A       10.0.0.100
 bastion              IN      A       10.0.0.100
