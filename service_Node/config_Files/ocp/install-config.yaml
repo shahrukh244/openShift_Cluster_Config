@@ -9,7 +9,7 @@ controlPlane:
   name: master
   replicas: 3
 metadata:
-  name: lan # Cluster name
+  name: lab # Cluster name
 networking:
   clusterNetwork:
     - cidr: 10.128.0.0/14
@@ -23,3 +23,4 @@ fips: false
 pullSecret: '{"auths": ...}'
 
 sshKey: "ssh-ed25519 AAAA..."
+
