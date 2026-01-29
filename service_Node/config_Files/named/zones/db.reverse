@@ -13,6 +13,8 @@ $TTL    604800
 1      IN    PTR    api.ocp.lan.
 1      IN    PTR    api-int.ocp.lan.
 ;
+200    IN    PTR    ocp-bootstrap.ocp.lan.
+;
 100    IN  PTR  bastion.ocp.lan.
 ;
 211    IN    PTR    ocp-cp-1.ocp.lan.
