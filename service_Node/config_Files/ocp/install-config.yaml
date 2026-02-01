@@ -1,26 +1,28 @@
 apiVersion: v1
 baseDomain: ocp.lan
+metadata:
+  name: ocp
+
 compute:
-  - hyperthreading: Enabled
-    name: worker
-    replicas: 0 # Must be set to 0 for User Provisioned Installation as worker nodes will be manually deployed.
+- name: worker
+  replicas: 0
+
 controlPlane:
-  hyperthreading: Enabled
   name: master
   replicas: 3
-metadata:
-  name: lab # Cluster name
+
 networking:
-  clusterNetwork:
-    - cidr: 10.128.0.0/14
-      hostPrefix: 23
   networkType: OVNKubernetes
+  clusterNetwork:
+  - cidr: 10.128.0.0/14
+    hostPrefix: 23
   serviceNetwork:
-    - 172.30.0.0/16
+  - 172.30.0.0/16
+
 platform:
   none: {}
-fips: false
-pullSecret: '{"auths": ...}'
 
-sshKey: "ssh-ed25519 AAAA..."
+pullSecret: '<PASTE_PULL_SECRET_HERE>'
 
+sshKey: |
+  ssh-rsa AAAA...your_ssh_key...
