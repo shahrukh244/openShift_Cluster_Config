@@ -1,36 +1,20 @@
 
 # Set HostName
 
-hostnamectl set-hostname svc.ocp.lan
-bash
-
-
-
-# Share Disk 
-
-parted /dev/nvme0n2 --script mklabel gpt
-parted /dev/nvme0n2 --script mkpart primary xfs 0% 100%
-
-lsblk | grep nvme0n2
-mkfs.xfs /dev/nvme0n2p1
-
-mkdir /share
-mount /dev/nvme0n2p1 /share
-blkid /dev/nvme0n2p1
-
-echo 'UUID=af9ea414-9df6-4518-bf82-86544069652a /share xfs defaults 0 0' >> /etc/fstab
-grep /share /etc/fstab
-
+hostnamectl set-hostname svc.lab.ocp.lan.
+exec bash
 
 
 
 # Config Local-Repo
 
+lsblk
+
 mkdir /tmp/redhat_iso
 mount /dev/sr0 /tmp/redhat_iso/
 
-mkdir /share/redhat_rpm
-cp -rf /tmp/redhat_iso/BaseOS/ /tmp/redhat_iso/AppStream/ /share/redhat_rpm/
+mkdir /mnt/redhat_rpm
+cp -rf /tmp/redhat_iso/BaseOS/ /tmp/redhat_iso/AppStream/ /mnt/redhat_rpm/
 
 umount /tmp/redhat_iso
 rm -rf /tmp/redhat_iso
@@ -39,60 +23,39 @@ rm -rf /tmp/redhat_iso
 sudo bash -c 'cat > /etc/yum.repos.d/local.repo <<EOF
 [AppStream]
 name=AppStream
-baseurl=file:///share/redhat_rpm/AppStream
+baseurl=file:///mnt/redhat_rpm/AppStream
 enabled=1
 gpgcheck=0
 
 [BaseOS]
 name=BaseOS
-baseurl=file:///share/redhat_rpm/BaseOS
+baseurl=file:///mnt/redhat_rpm/BaseOS
 enabled=1
 gpgcheck=0
 EOF'
 
 yum repolist
+
+
 yum install -y git wget
-
-
 
 git clone https://github.com/shahrukh244/openShift_Cluster_Config.git
 
 
 
-# Static IP for ens160
 
-mv /etc/NetworkManager/system-connections/ens160.nmconnection /etc/NetworkManager/system-connections/ens160.nmconnection.ORG
-
-cp -rf /root/openShift_Cluster_Config/service_Node/config_Files/network-ip/ens160.nmconnection /etc/NetworkManager/system-connections/ens160.nmconnection
-
-chmod 600 /etc/NetworkManager/system-connections/ens160.nmconnection
-
-
-
-# Static IP for ens192
-
-mv /etc/NetworkManager/system-connections/ens192.nmconnection /etc/NetworkManager/system-connections/ens192.nmconnection.ORG
-
-cp -rf /root/openShift_Cluster_Config/service_Node/config_Files/network-ip/ens192.nmconnection /etc/NetworkManager/system-connections/ens192.nmconnection
-
-chmod 600 /etc/NetworkManager/system-connections/ens192.nmconnection
+# Disable Swap
+swapon --show
+swapoff -a
+sed -i '/swap/d' /etc/fstab
+swapon --show
 
 
 
-nmcli connection modify ens192 connection.zone internal
-nmcli connection modify ens160 connection.zone external
-
-firewall-cmd --set-default-zone=internal
-firewall-cmd --reload
-firewall-cmd --get-active-zones
-
-firewall-cmd --zone=external --add-masquerade --permanent
-firewall-cmd --zone=internal --set-target=ACCEPT --permanent
-firewall-cmd --reload
-
-systemctl restart NetworkManager
-
-reboot
+# IP Forwarding
+cat /proc/sys/net/ipv4/ip_forward
+echo "net.ipv4.ip_forward = 1" > /etc/sysctl.d/99-ipforward.conf
+sysctl --system
 
 
 
@@ -100,26 +63,26 @@ reboot
 
 # Install DNS
 
-dnf install bind bind-utils -y
+dnf install -y bind bind-utils
 
-mv /etc/named.conf /etc/named.conf.ORG
-
-cp -rf /root/openShift_Cluster_Config/service_Node/config_Files/named/named.conf /etc/named.conf
+cp -rf ~/openShift_Cluster_Config/service_Node/config_Files/named/named.conf /etc/named.conf
 
 chown root:named /etc/named.conf
 chmod 640 /etc/named.conf
 
-cp -rf /root/openShift_Cluster_Config/service_Node/config_Files/named/zones /etc/named
+cp -rf ~/openShift_Cluster_Config/service_Node/config_Files/named/zones/ocp.lan.zone /var/named/ocp.lan.zone
 
-chown root:named /etc/named/zones/db.ocp.lan
-chown root:named /etc/named/zones/db.reverse
+cp -rf ~/openShift_Cluster_Config/service_Node/config_Files/named/zones/10.0.0.rev /var/named/10.0.0.rev
 
-chmod 640 /etc/named/zones/db.ocp.lan
-chmod 640 /etc/named/zones/db.reverse
+chown root:named /var/named/ocp.lan.zone
+chown root:named /var/named/10.0.0.rev
+
+chmod 640 /var/named/ocp.lan.zone
+chmod 640 /var/named/10.0.0.rev
 
 named-checkconf -z /etc/named.conf
-named-checkzone ocp.lan /etc/named/zones/db.ocp.lan
-named-checkzone 0.0.10.in-addr.arpa /etc/named/zones/db.reverse
+named-checkzone ocp.lan /var/named/ocp.lan.zone
+named-checkzone 0.0.10.in-addr.arpa /var/named/10.0.0.rev
 
 firewall-cmd --add-port=53/udp --zone=internal --permanent
 firewall-cmd --add-port=53/tcp --zone=internal --permanent
@@ -130,16 +93,19 @@ systemctl start named
 systemctl status named
 
 
+dig @10.0.0.1 api.ocp.lan
+dig @10.0.0.1 ocp-cp-1.ocp.lan
+dig @10.0.0.1 -x 10.0.0.211
+
+
 
 
 
 # Install DHCP
 
-dnf install dhcp-server -y
+dnf install -y dhcp-server
 
-mv /etc/dhcp/dhcpd.conf /etc/dhcp/dhcpd.conf.ORG
-
-cp -rf /root/openShift_Cluster_Config/service_Node/config_Files/dhcp/dhcpd.conf /etc/dhcp/dhcpd.conf
+cp -rf ~/openShift_Cluster_Config/service_Node/config_Files/dhcp/dhcpd.conf /etc/dhcp/dhcpd.conf
 
 chown root:dhcpd /etc/dhcp/dhcpd.conf
 chmod 640 /etc/dhcp/dhcpd.conf
@@ -156,126 +122,75 @@ systemctl enable dhcpd
 systemctl start dhcpd
 systemctl status dhcpd
 
+journalctl -u dhcpd -n 20 --no-pager
 
 
 
 
-# Install HAProxy
+# Install PXT (TFTP)
 
-dnf install haproxy -y
+dnf install -y tftp-server syslinux
 
-mv /etc/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg.ORG
+systemctl enable tftp.socket
+systemctl start tftp.socket
 
-cp -rf /root/openShift_Cluster_Config/service_Node/config_Files/haproxy/haproxy.cfg /etc/haproxy/haproxy.cfg
+mkdir -p /var/lib/tftpboot/pxelinux.cfg
+cp /usr/share/syslinux/pxelinux.0 /var/lib/tftpboot/
+cp /usr/share/syslinux/menu.c32 /var/lib/tftpboot/
 
 
-firewall-cmd --add-port=6443/tcp --zone=internal --permanent
-firewall-cmd --add-port=6443/tcp --zone=external --permanent
-firewall-cmd --add-port=22623/tcp --zone=internal --permanent
-firewall-cmd --add-service=http --zone=internal --permanent
-firewall-cmd --add-service=http --zone=external --permanent
-firewall-cmd --add-service=https --zone=internal --permanent
-firewall-cmd --add-service=https --zone=external --permanent
-firewall-cmd --add-port=9000/tcp --zone=external --permanent
-firewall-cmd --reload
+cp -rf ~/openShift_Cluster_Config/service_Node/config_Files/pxe/default /var/lib/tftpboot/pxelinux.cfg/default
 
-setsebool -P haproxy_connect_any 1
-systemctl enable haproxy
-systemctl start haproxy
-systemctl status haproxy
+cp -rf ~/openShift_Cluster_Config/service_Node/config_Files/pxe/grub.cfg /var/lib/tftpboot/grub.cfg
 
+chmod 644 /var/lib/tftpboot/pxelinux.cfg/default
+chmod 644 /var/lib/tftpboot/grub.cfg
 
 
 
 
-dnf install httpd -y
+# Install HTTP
 
-sed -i 's/Listen 80/Listen 0.0.0.0:8080/' /etc/httpd/conf/httpd.conf
+dnf install -y httpd
 
-firewall-cmd --add-port=8080/tcp --zone=internal --permanent
-firewall-cmd --reload
 
-systemctl enable httpd
-systemctl start httpd
-systemctl status httpd
+wget https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.20/latest/rhcos-live-iso.x86_64.iso
 
+wget https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.20/latest/rhcos-live-kernel.x86_64
 
+wget https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.20/latest/rhcos-live-initramfs.x86_64.img
 
 
+mkdir -p /var/www/html/rhcos
+mv ~/rhcos-live-iso.x86_64.iso /var/www/html/rhcos/rhcos-live.x86_64.iso
 
 
+mkdir -p /var/lib/tftpboot/rhcos
+mv ~/rhcos-live-kernel.x86_64 /var/lib/tftpboot/rhcos/vmlinuz
 
-dnf install nfs-utils -y
+mv ~/rhcos-live-initramfs.x86_64.img /var/lib/tftpboot/rhcos/initramfs.img
 
-mkdir -p /share/OpenShift/StorageClass/Delete
-mkdir -p /share/OpenShift/StorageClass/Retain
-chown -R nobody:nobody /share/OpenShift
-chmod -R 777 /share/OpenShift
 
-cp -rf /root/openShift_Cluster_Config/service_Node/config_Files/nfs/exports /etc/exports
+mkdir -p /var/www/html/ignition
+chown -R apache:apache /var/www/html
+chmod -R 755 /var/www/html
 
-chmod 644 /etc/exports
 
-exportfs -rv
+restorecon -Rv /var/www/html
+setsebool -P httpd_read_user_content 1
 
-firewall-cmd --zone=internal --add-service mountd --permanent
-firewall-cmd --zone=internal --add-service rpc-bind --permanent
-firewall-cmd --zone=internal --add-service nfs --permanent
-firewall-cmd --reload
+systemctl restart httpd
+systemctl enable --now httpd
 
-systemctl enable nfs-server rpcbind
-systemctl start nfs-server rpcbind nfs-mountd
 
 
 
 
-timedatectl set-timezone UTC
 
+haproxy \
 
-mkdir ~/ocp-install
-
-cp -rf /root/openShift_Cluster_Config/service_Node/config_Files/install-config.yaml ~/ocp-install
-
-ssh-keygen
-
-cat .ssh/id_rsa.pub
-
-# Now past "pub key" in "sshKey:" 
-vi ~/ocp-install/install-config.yaml
-
-
-
-
-wget https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/4.20.0/openshift-install-linux.tar.gz
-
-tar xzvf openshift-install-linux.tar.gz
-
-
-wget https://mirror.openshift.com/pub/openshift-v4/x86_64/dependencies/rhcos/4.20/latest/rhcos-metal.x86_64.raw.gz
-
-
-
-# For "OC" Command
-wget https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/4.20.0/openshift-client-linux.tar.gz
-
-tar -xzvf openshift-client-linux.tar.gz
-
-cp oc /usr/local/bin/
-
-# For "kubectl" Command
-
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-chmod +x kubectl && mv kubectl /usr/local/bin/
-kubectl version --client
-
-
-
-
-
-
-
-
-
+chrony \
+wget podman
 
 
 
