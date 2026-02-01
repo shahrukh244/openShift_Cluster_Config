@@ -1,52 +1,19 @@
-$TTL    604800
-@       IN      SOA     svc.lab.ocp.lan. contact.ocp.lan. (
-                  2     ; Serial
-             604800     ; Refresh
-              86400     ; Retry
-            2419200     ; Expire
-             604800 )   ; Minimum
+$TTL 1D
+@   IN SOA svc.ocp.lan. root.ocp.lan. (
+        2026020101 ; serial
+        1H
+        15M
+        1W
+        1D )
 
-        IN      NS      svc.ocp.lan.
+    IN NS svc.ocp.lan.
 
-; --- Service Node ---
-svc.lab.ocp.lan.     IN      A       10.0.0.1
-svc                  IN      A       10.0.0.1
+svc             IN A 10.0.0.1
+bootstrap       IN A 10.0.0.200
+ocp-cp-1        IN A 10.0.0.211
+ocp-cp-2        IN A 10.0.0.212
+ocp-cp-3        IN A 10.0.0.213
 
-; Temp Bootstrap Node
-ocp-bootstrap.lab.ocp.lan.    IN      A      10.0.0.200
-ocp-bootstrap                 IN      A      10.0.0.200
-
-; --- Bastion Node ---
-bastion.lab.ocp.lan. IN      A       10.0.0.100
-bastion              IN      A       10.0.0.100
-
-; --- Control Plane Nodes ---
-ocp-cp-1.lab.ocp.lan. IN      A      10.0.0.211
-ocp-cp-1              IN      A      10.0.0.211
-
-ocp-cp-2.lab.ocp.lan. IN      A      10.0.0.212
-ocp-cp-2              IN      A      10.0.0.212
-
-ocp-cp-3.lab.ocp.lan. IN      A      10.0.0.213
-ocp-cp-3              IN      A      10.0.0.213
-
-
-; --- OpenShift Internal - Load Balancer (on svc-1) ---
-api.lab.ocp.lan.        IN    A    10.0.0.1
-api-int.lab.ocp.lan.    IN    A    10.0.0.1
-*.apps.lab.ocp.lan.     IN    A    10.0.0.1
-
-; --- ETCD Cluster ---
-etcd-0.lab.ocp.lan.    IN    A     10.0.0.211
-etcd-1.lab.ocp.lan.    IN    A     10.0.0.212
-etcd-2.lab.ocp.lan.    IN    A     10.0.0.213
-
-; --- OpenShift Console ---
-oauth-openshift.apps.lab.ocp.lan.           IN  A  10.0.0.1
-console-openshift-console.apps.lab.ocp.lan. IN  A  10.0.0.1
-
-; --- SRV Records (Fixed with FQDNs) ---
-_etcd-server-ssl._tcp.lab.ocp.lan. 86400 IN SRV 0 10 2380 etcd-0.lab.ocp.lan.
-_etcd-server-ssl._tcp.lab.ocp.lan. 86400 IN SRV 0 10 2380 etcd-1.lab.ocp.lan.
-_etcd-server-ssl._tcp.lab.ocp.lan. 86400 IN SRV 0 10 2380 etcd-2.lab.ocp.lan.
-
+api             IN A 10.0.0.1
+api-int         IN A 10.0.0.1
+*.apps          IN A 10.0.0.1
