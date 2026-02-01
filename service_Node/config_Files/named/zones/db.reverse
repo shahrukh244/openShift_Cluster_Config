@@ -1,22 +1,15 @@
-$TTL    604800
-@       IN      SOA     svc.lab.ocp.lan. contact.ocp.lan (
-                  2     ; Serial
-             604800     ; Refresh
-              86400     ; Retry
-            2419200     ; Expire
-             604800     ; Minimum
-)
+$TTL 1D
+@   IN SOA svc.ocp.lan. root.ocp.lan. (
+        2026020101
+        1H
+        15M
+        1W
+        1D )
 
-  IN      NS      svc.ocp.lan.
+    IN NS svc.ocp.lan.
 
-1      IN    PTR    svc.lab.ocp.lan.
-1      IN    PTR    api.lab.ocp.lan.
-1      IN    PTR    api-int.lab.ocp.lan.
-;
-200    IN    PTR    ocp-bootstrap.lab.ocp.lan.
-;
-100    IN  PTR  bastion.lab.ocp.lan.
-;
-211    IN    PTR    ocp-cp-1.lab.ocp.lan.
-212    IN    PTR    ocp-cp-2.lab.ocp.lan.
-213    IN    PTR    ocp-cp-3.lab.ocp.lan.
+1       IN PTR svc.ocp.lan.
+200     IN PTR bootstrap.ocp.lan.
+211     IN PTR ocp-cp-1.ocp.lan.
+212     IN PTR ocp-cp-2.ocp.lan.
+213     IN PTR ocp-cp-3.ocp.lan.
